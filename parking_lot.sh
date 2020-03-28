@@ -3,9 +3,9 @@ arg1=$1
 ##directory where jar file is located    
 dir=target
 ##jar file name
-jar_name=parkinglot-1.0-SNAPSHOT.jar
+jar_name=parkingLot.jar
 
-mvn clean install 
+mvn clean install -DskipTests
 
 if [ -z "$1" ] ; then
         java -jar $dir/$jar_name

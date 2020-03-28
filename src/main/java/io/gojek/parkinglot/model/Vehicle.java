@@ -3,49 +3,56 @@
  */
 package io.gojek.parkinglot.model;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.util.Objects;
 
 /**
- * @author vaibhav
+ * @author vaibhav.singh
  *
  */
-public abstract class Vehicle implements Externalizable
+public abstract class Vehicle
 {
-	private String	registrationNo	= null;
+	private String	licensePlateNo	= null;
 	private String	color			= null;
-	
-	public Vehicle(String registrationNo, String color)
+
+	public Vehicle(String licensePlateNo, String color)
 	{
-		this.registrationNo = registrationNo;
+		this.licensePlateNo = licensePlateNo;
 		this.color = color;
 	}
-	
+
 	@Override
-	public String toString()
+	public boolean equals(Object object)
 	{
-		return "[registrationNo=" + registrationNo + ", color=" + color + "]";
+		if (this == object)
+			return true;
+		if (!(object instanceof Vehicle))
+			return false;
+		Vehicle that = (Vehicle) object;
+		return Objects.equals(getLicensePlateNo(), that.getLicensePlateNo());
 	}
-	
+
+	@Override
+	public int hashCode()
+	{
+		return super.hashCode();
+	}
+
 	/**
-	 * @return the registrationNo
+	 * @return the licensePlateNo
 	 */
-	public String getRegistrationNo()
+	public String getLicensePlateNo()
 	{
-		return registrationNo;
+		return licensePlateNo;
 	}
-	
+
 	/**
-	 * @param registrationNo
-	 *            the registrationNo to set
+	 * @param licensePlateNo the licensePlateNo to set
 	 */
-	public void setRegistrationNo(String registrationNo)
+	public void setLicensePlateNo(String licensePlateNo)
 	{
-		this.registrationNo = registrationNo;
+		this.licensePlateNo = licensePlateNo;
 	}
-	
+
 	/**
 	 * @return the color
 	 */
@@ -53,27 +60,12 @@ public abstract class Vehicle implements Externalizable
 	{
 		return color;
 	}
-	
+
 	/**
-	 * @param color
-	 *            the color to set
+	 * @param color the color to set
 	 */
 	public void setColor(String color)
 	{
 		this.color = color;
-	}
-	
-	@Override
-	public void writeExternal(ObjectOutput out) throws IOException
-	{
-		out.writeObject(getRegistrationNo());
-		out.writeObject(getColor());
-	}
-	
-	@Override
-	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException
-	{
-		setRegistrationNo((String) in.readObject());
-		setColor((String) in.readObject());
 	}
 }

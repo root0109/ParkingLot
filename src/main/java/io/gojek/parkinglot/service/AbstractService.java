@@ -1,11 +1,15 @@
+/**
+ * 
+ */
 package io.gojek.parkinglot.service;
 
 /**
- * This is a marker Interface for all services
+ * Mrker Interface
  * 
- * @author vaibhav
+ * @author vaibhav.singh
+ *
  */
 public interface AbstractService
 {
-	
+
 }

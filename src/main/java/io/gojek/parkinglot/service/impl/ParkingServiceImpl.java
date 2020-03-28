@@ -5,120 +5,97 @@ package io.gojek.parkinglot.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.StringJoiner;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.UUID;
 
-import io.gojek.parkinglot.constants.Constants;
-import io.gojek.parkinglot.dao.ParkingDataManager;
-import io.gojek.parkinglot.dao.impl.MemoryParkingManager;
-import io.gojek.parkinglot.exception.ErrorCode;
-import io.gojek.parkinglot.exception.ParkingException;
+import io.gojek.parkinglot.dao.ParkingDao;
+import io.gojek.parkinglot.db.manager.InMemoryParkingManager;
+import io.gojek.parkinglot.exception.ParkingKonstants;
+import io.gojek.parkinglot.exception.ParkingLotException;
+import io.gojek.parkinglot.model.ParkingLot;
 import io.gojek.parkinglot.model.Vehicle;
-import io.gojek.parkinglot.model.strategy.NearestFirstParkingStrategy;
-import io.gojek.parkinglot.model.strategy.ParkingStrategy;
 import io.gojek.parkinglot.service.ParkingService;
+import io.gojek.parkinglot.service.strategy.NearestFirstStrategy;
+import io.gojek.parkinglot.service.strategy.ParkingStrategy;
 
 /**
- * 
- * This class has to be made singleton and used as service to be injected in
- * RequestProcessor
- * 
- * @author vaibhav
+ * @author vaibhav.singh
  *
  */
 public class ParkingServiceImpl implements ParkingService
 {
-	private ParkingDataManager<Vehicle> dataManager = null;
-	
-	private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-	
+	private ParkingDao<Vehicle> parkingDao = null;
+
 	@Override
-	public void createParkingLot(int level, int capacity) throws ParkingException
+	public ParkingLot createParkingLot(int level, int capacity) throws ParkingLotException
 	{
-		if (dataManager != null)
-			throw new ParkingException(ErrorCode.PARKING_ALREADY_EXIST.getMessage());
+		if (parkingDao != null)
+			throw new ParkingLotException(ParkingKonstants.PARKING_ALREADY_EXIST);
 		List<Integer> parkingLevels = new ArrayList<>();
 		List<Integer> capacityList = new ArrayList<>();
 		List<ParkingStrategy> parkingStrategies = new ArrayList<>();
 		parkingLevels.add(level);
 		capacityList.add(capacity);
-		parkingStrategies.add(new NearestFirstParkingStrategy());
-		this.dataManager = MemoryParkingManager.getInstance(parkingLevels, capacityList, parkingStrategies);
+		parkingStrategies.add(new NearestFirstStrategy());
+		this.parkingDao = new InMemoryParkingManager(parkingLevels, capacityList, parkingStrategies);
 		System.out.println("Created parking lot with " + capacity + " slots");
+
+		ParkingLot lot = new ParkingLot();
+		String parkingId = UUID.randomUUID().toString();
+		lot.setParkingId(parkingId);
+		lot.setSlots(capacity);
+		return lot;
 	}
-	
+
 	@Override
-	public Optional<Integer> park(int level, Vehicle vehicle) throws ParkingException
+	public int park(int level, Vehicle vehicle) throws ParkingLotException
 	{
-		Optional<Integer> value = Optional.empty();
-		lock.writeLock().lock();
+		int value = -1;
 		validateParkingLot();
 		try
 		{
-			value = Optional.of(dataManager.parkCar(level, vehicle));
-			if (value.get() == Constants.NOT_AVAILABLE)
+			value = parkingDao.parkVehicle(level, vehicle);
+			if (value == ParkingKonstants.NOT_AVAILABLE)
 				System.out.println("Sorry, parking lot is full");
-			else if (value.get() == Constants.VEHICLE_ALREADY_EXIST)
+			else if (value == ParkingKonstants.VEHICLE_ALREADY_PARKED)
 				System.out.println("Sorry, vehicle is already parked.");
 			else
-				System.out.println("Allocated slot number: " + value.get());
+				System.out.println("Allocated slot number: " + value);
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.PROCESSING_ERROR.getMessage(), e);
-		}
-		finally
-		{
-			lock.writeLock().unlock();
+			throw new ParkingLotException(ParkingKonstants.PROCESSING_ERROR, e);
 		}
 		return value;
 	}
-	
-	/**
-	 * @throws ParkingException
-	 */
-	private void validateParkingLot() throws ParkingException
-	{
-		if (dataManager == null)
-		{
-			throw new ParkingException(ErrorCode.PARKING_NOT_EXIST_ERROR.getMessage());
-		}
-	}
-	
+
 	@Override
-	public void unPark(int level, int slotNumber) throws ParkingException
+	public boolean unPark(int level, int slotNumber) throws ParkingLotException
 	{
-		lock.writeLock().lock();
 		validateParkingLot();
 		try
 		{
-			
-			if (dataManager.leaveCar(level, slotNumber))
+			if (parkingDao.leaveVehicle(level, slotNumber))
 				System.out.println("Slot number " + slotNumber + " is free");
 			else
 				System.out.println("Slot number is Empty Already.");
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.INVALID_VALUE.getMessage().replace("{variable}", "slot_number"), e);
+			throw new ParkingLotException(ParkingKonstants.INVALID_VALUE, e);
 		}
-		finally
-		{
-			lock.writeLock().unlock();
-		}
+		return true;
 	}
-	
+
 	@Override
-	public void getStatus(int level) throws ParkingException
+	public void getStatus(int level) throws ParkingLotException
 	{
-		lock.readLock().lock();
 		validateParkingLot();
 		try
 		{
 			System.out.println("Slot No.\tRegistration No.\tColor");
-			List<String> statusList = dataManager.getStatus(level);
-			if (statusList.size() == 0)
+			List<String> statusList = parkingDao.getStatus(level);
+			if (statusList.isEmpty())
 				System.out.println("Sorry, parking lot is empty.");
 			else
 			{
@@ -130,66 +107,55 @@ public class ParkingServiceImpl implements ParkingService
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.PROCESSING_ERROR.getMessage(), e);
-		}
-		finally
-		{
-			lock.readLock().unlock();
+			throw new ParkingLotException(ParkingKonstants.PROCESSING_ERROR, e);
 		}
 	}
-	
-	public Optional<Integer> getAvailableSlotsCount(int level) throws ParkingException
+
+	@Override
+	public int getAvailableSlotsCount(int level) throws ParkingLotException
 	{
-		lock.readLock().lock();
-		Optional<Integer> value = Optional.empty();
+		int value = 0;
 		validateParkingLot();
 		try
 		{
-			value = Optional.of(dataManager.getAvailableSlotsCount(level));
+			value = parkingDao.getAvailableSlotsCount(level);
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.PROCESSING_ERROR.getMessage(), e);
-		}
-		finally
-		{
-			lock.readLock().unlock();
+			throw new ParkingLotException(ParkingKonstants.PROCESSING_ERROR, e);
 		}
 		return value;
 	}
-	
+
 	@Override
-	public void getRegNumberForColor(int level, String color) throws ParkingException
+	public List<String> getRegNumberForColor(int level, String color) throws ParkingLotException
 	{
-		lock.readLock().lock();
 		validateParkingLot();
+		List<String> registrationList = null;
 		try
 		{
-			List<String> registrationList = dataManager.getRegNumberForColor(level, color);
-			if (registrationList.size() == 0)
+			registrationList = parkingDao.getRegNumberForColor(level, color);
+			if (registrationList.isEmpty())
 				System.out.println("Not Found");
 			else
 				System.out.println(String.join(",", registrationList));
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.PROCESSING_ERROR.getMessage(), e);
+			throw new ParkingLotException(ParkingKonstants.PROCESSING_ERROR, e);
 		}
-		finally
-		{
-			lock.readLock().unlock();
-		}
+		return registrationList;
 	}
-	
+
 	@Override
-	public void getSlotNumbersFromColor(int level, String color) throws ParkingException
+	public List<Integer> getSlotNumbersFromColor(int level, String color) throws ParkingLotException
 	{
-		lock.readLock().lock();
 		validateParkingLot();
+		List<Integer> slotList = null;
 		try
 		{
-			List<Integer> slotList = dataManager.getSlotNumbersFromColor(level, color);
-			if (slotList.size() == 0)
+			slotList = parkingDao.getSlotNumbersFromColor(level, color);
+			if (slotList.isEmpty())
 				System.out.println("Not Found");
 			StringJoiner joiner = new StringJoiner(",");
 			for (Integer slot : slotList)
@@ -200,40 +166,40 @@ public class ParkingServiceImpl implements ParkingService
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.PROCESSING_ERROR.getMessage(), e);
+			throw new ParkingLotException(ParkingKonstants.PROCESSING_ERROR, e);
 		}
-		finally
-		{
-			lock.readLock().unlock();
-		}
+		return slotList;
 	}
-	
+
 	@Override
-	public int getSlotNoFromRegistrationNo(int level, String registrationNo) throws ParkingException
+	public int getSlotNoFromRegistrationNo(int level, String registrationNo) throws ParkingLotException
 	{
 		int value = -1;
-		lock.readLock().lock();
 		validateParkingLot();
 		try
 		{
-			value = dataManager.getSlotNoFromRegistrationNo(level, registrationNo);
-			System.out.println(value != -1 ? value : "Not Found");
+			value = parkingDao.getSlotNoFromRegistrationNo(level, registrationNo);
+			System.out.println(value != ParkingKonstants.NOT_FOUND ? value : "Not Found");
 		}
 		catch (Exception e)
 		{
-			throw new ParkingException(ErrorCode.PROCESSING_ERROR.getMessage(), e);
-		}
-		finally
-		{
-			lock.readLock().unlock();
+			throw new ParkingLotException(ParkingKonstants.PROCESSING_ERROR, e);
 		}
 		return value;
 	}
-	
-	@Override
-	public void doCleanup()
+
+	private void validateParkingLot() throws ParkingLotException
 	{
-		if (dataManager != null)
-			dataManager.doCleanup();
+		if (parkingDao == null)
+		{
+			throw new ParkingLotException(ParkingKonstants.PARKING_NOT_EXIST_ERROR);
+		}
+	}
+
+	@Override
+	public void doCleanUp()
+	{
+		if (parkingDao != null)
+			parkingDao.doCleanup();
 	}
 }

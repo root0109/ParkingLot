@@ -4,9 +4,9 @@ GOJEK Parking lot Problem
 
 * JDK 1.8.
 
-* Maven 2.
+* Maven 3
 
-* Junit 4.12
+* Junit 4.11
 
 The project can be run as follows in one of the two ways :
 1) ./parking_lot.sh  <input_filepath>  

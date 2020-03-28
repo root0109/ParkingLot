@@ -8,22 +8,25 @@ import java.util.List;
 import io.gojek.parkinglot.exception.ParkingLotException;
 import io.gojek.parkinglot.model.ParkingLot;
 import io.gojek.parkinglot.model.Vehicle;
+import io.gojek.parkinglot.service.strategy.ParkingStrategy;
 
 /**
  * @author vaibhav.singh
  *
  */
-public interface ParkingService extends AbstractService
+public interface MultiParkingService extends AbstractService
 {
 	public ParkingLot createParkingLot(int level, int capacity) throws ParkingLotException;
 
-	public int park(int level, Vehicle vehicle) throws ParkingLotException;
+	public int park(ParkingLot parkingLot, int level, Vehicle vehicle) throws ParkingLotException;
+
+	public int park(int level, Vehicle vehicle, ParkingStrategy parkingStrategy) throws ParkingLotException;
 
 	public boolean unPark(int level, int slotNumber) throws ParkingLotException;
 
-	public void getStatus(int level) throws ParkingLotException;
+	public void getStatus(ParkingLot parkingLot, int level) throws ParkingLotException;
 
-	public int getAvailableSlotsCount(int level) throws ParkingLotException;
+	public int getAvailableSlotsCount(ParkingLot parkingLot, int level) throws ParkingLotException;
 
 	public List<String> getRegNumberForColor(int level, String color) throws ParkingLotException;
 
