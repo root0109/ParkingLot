@@ -35,7 +35,7 @@ public class Main
 			{
 				case 0: // Interactive: command-line input/output
 				{
-					System.out.println("Please Enter 'exit' to end Execution");
+					// System.out.println("Please Enter 'exit' to end Execution");
 					System.out.println("Input:");
 					while (true)
 					{
@@ -150,6 +150,7 @@ public class Main
 		buffer = buffer.append(
 				"G) Get slot number for the given car number         ---> slot_number_for_registration_number {car_number}")
 				.append("\n");
+		buffer = buffer.append("H) Exit the program                                 ---> exit").append("\n");
 		System.out.println(buffer.toString());
 	}
 }
